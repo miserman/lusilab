@@ -1,0 +1,15 @@
+^lusilab\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^docs$
+^pkgdown$
+^LICENSE\.md$
+^build\.R$
+^logo\.svg$
+^.*\.Rproj$
+^vignettes
+^tests/js$
+^package
+^node_modules$
+^coverage$
+_snaps

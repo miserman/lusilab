@@ -1,0 +1,11 @@
+.Rproj.user
+.vscode
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+*.Rproj
+inst/doc
+/coverage/
+package-lock.json
+node_modules
