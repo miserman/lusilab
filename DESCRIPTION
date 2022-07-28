@@ -6,8 +6,8 @@ Maintainer: Micah Iserman <micah.iserman@gmail.com>
 Description: Includes functions for power analysis, permuting or bootstrapping
   mediations, automated factor analysis, and pulling text from reddit, imsdb, and rottentomatoes,
   plus some other things to play with.
-Imports: jsonlite, lingmatch, RedditExtractoR
+Imports: jsonlite, httr, parallel, lingmatch, RedditExtractoR
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE, old_usage = TRUE)
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1

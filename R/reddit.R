@@ -55,6 +55,7 @@
 #' }
 #' @export
 #'
+
 reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv", write = TRUE, lim = 100, filter = "\\[removed\\]", clean = TRUE, ...) {
   saf <- options("stringsAsFactors")[[1]]
   options(stringsAsFactors = FALSE)

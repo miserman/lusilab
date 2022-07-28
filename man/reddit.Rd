@@ -13,7 +13,8 @@ reddit(topics, search = NULL, sort = "hot", filename = "reddit.csv",
 
 reddit.karma(users)
 
-reddit.usercomments(users, filename, subreddits, lim = 100, type = "comments")
+reddit.usercomments(users, filename, subreddits, lim = 100,
+  type = "comments")
 
 reddit.lsm(data)
 }
