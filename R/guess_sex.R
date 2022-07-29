@@ -23,7 +23,7 @@ guess_sex <- function(names, retry = 50, search_source = "https://search.yahoo.c
                      attempt = if (is.numeric(retry)) retry else 0) {
     req <- httr::GET(paste0(source, gsub("[ _&-]+", "+", term)))
     if (req$status_code == 200) {
-      p <- paste("", gsub("\\W+", " ", tolower(paste0(httr::content(req, "text"), collapse = " "))), "")
+      p <- paste("", gsub("[^a-z']+", " ", tolower(paste0(httr::content(req, "text"), collapse = " "))), "")
       fem <- length(strsplit(p, female, perl = TRUE)[[1]])
       mal <- length(strsplit(p, male, perl = TRUE)[[1]])
       conf <- fem / (fem + mal)

@@ -16,6 +16,9 @@
     <loc>/LICENSE.html</loc>
   </url>
   <url>
+    <loc>/reference/get_baby_names.html</loc>
+  </url>
+  <url>
     <loc>/reference/guess_sex.html</loc>
   </url>
   <url>
@@ -26,5 +29,8 @@
   </url>
   <url>
     <loc>/reference/reddit.html</loc>
+  </url>
+  <url>
+    <loc>/reference/taffy.html</loc>
   </url>
 </urlset>
