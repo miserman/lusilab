@@ -35,7 +35,7 @@ guess_sex <- function(names, retry = 50, search_source = "https://search.yahoo.c
         male = mal
       )
     } else if (attempt > 0 || req$status_code %in% c(503, 999)) {
-      sys.sleep(5)
+      Sys.sleep(5)
       search(term, attempt = attempt - 1)
     }
   }
