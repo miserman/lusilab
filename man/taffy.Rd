@@ -27,22 +27,22 @@ with a column for each cluster, and row for each column (\code{taffyInf}).
 \description{
 Clusters columns in a matrix based on a very minimal algorithm:
 \itemize{
-\item Start with the column with the biggest sum.
+\item Start with the column with the biggest sum / smallest other-cluster weight.
 \item Calculate its correlation with all other columns, and use that to define a cluster.
 \item Repeat with all unassigned columns.
 }
 \code{taffyInf} differs in that it will not eliminate columns from the pool, but will
-base the selection of an initial cluster on the weight across all previously assigned clusters.
+base the selection of an initial term on the weight across all previously assigned clusters.
 }
 \examples{
-m <- data.frame(
-  cluster1_term1 = c(1, 1, 1, 0, 0, 0),
-  cluster1_term2 = c(1, 1, 0, 0, 0, 0),
-  cluster2_term2 = c(0, 0, 0, 0, 1, 1),
-  cluster2_term1 = c(0, 0, 0, 1, 1, 1),
-  cluster3_term1 = c(1, 0, 0, 0, 0, 1),
-  cluster4_term1 = c(0, 0, 1, 1, 0, 0)
-)
+m <- Matrix(as.matrix(data.frame(
+  cluster1_term1 = c(1, 1, 0, 0),
+  cluster1_term2 = c(1, 0, 0, 0),
+  cluster2_term2 = c(0, 0, 0, 1),
+  cluster2_term1 = c(0, 0, 1, 1),
+  cluster3_term1 = c(1, 0, 0, 1),
+  cluster4_term1 = c(0, 1, 1, 0)
+)))
 taffy(m, co = .6)
 taffyInf(m)
 }
