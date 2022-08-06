@@ -17,25 +17,25 @@
 #'
 
 guess_sex <- function(names, retry = 50, search_source = "https://search.yahoo.com/search?q=", cores = detectCores() - 2) {
-  search <- function(term, source = search_source,
-                     female = " she | she's | her | hers | woman | (wife|sister|mother|gandmother|aunt) (of|to) ",
-                     male = " he | he's | him | his | man | (husband|brother|father|grandfather|uncle) (of|to) ",
+  search <- function(term, url = search_source, female = " she | she's | her | hers | woman | (?:wife|sister|mother|gandmother|aunt) (?:of|to) ",
+                     male = " he | he's | him | his | man | (?:husband|brother|father|grandfather|uncle) (?:of|to) ",
                      attempt = if (is.numeric(retry)) retry else 0) {
-    req <- httr::GET(paste0(source, gsub("[ _&-]+", "+", term)))
+    term <- trimws(paste("", gsub(paste(female, male, collapse = "|"), " ", term), ""))
+    req <- httr::GET(paste0(url, term))
     if (req$status_code == 200) {
-      p <- paste("", gsub("[^a-z']+", " ", tolower(paste0(httr::content(req, "text"), collapse = " "))), "")
-      fem <- length(strsplit(p, female, perl = TRUE)[[1]])
-      mal <- length(strsplit(p, male, perl = TRUE)[[1]])
-      conf <- fem / (fem + mal)
+      p <- paste("", gsub("[^a-z'-]+", " ", tolower(paste0(httr::content(req, "text"), collapse = " "))), "")
+      fem <- length(strsplit(p, female, perl = TRUE)[[1]]) - 1
+      mal <- length(strsplit(p, male, perl = TRUE)[[1]]) - 1
+      conf <- if (fem + mal) fem / (fem + mal) else 0
       data.frame(
         name = term,
-        guess = if (fem > mal) "female" else "male",
-        confidence = if (fem > mal) conf else 1 - conf,
+        guess = if (fem == mal) "unknown" else if (fem > mal) "female" else "male",
+        confidence = if (fem + mal) if (fem > mal) conf else 1 - conf else 0,
         female = fem,
         male = mal
       )
     } else if (attempt > 0 || req$status_code %in% c(503, 999)) {
-      Sys.sleep(5)
+      Sys.sleep(10)
       search(term, attempt = attempt - 1)
     }
   }
@@ -43,7 +43,7 @@ guess_sex <- function(names, retry = 50, search_source = "https://search.yahoo.c
   res <- if (cores > 1) {
     cl <- parallel::makeCluster(cores)
     on.exit(parallel::stopCluster(cl))
-    parLapply(cl, names, search)
+    parallel::parLapplyLB(cl, names, search)
   } else {
     lapply(names, search)
   }
