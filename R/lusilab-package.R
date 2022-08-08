@@ -6,7 +6,7 @@
 #' @importFrom parallel detectCores makeCluster clusterExport stopCluster parLapply
 #' @importFrom stats cor pf pnorm qf qnorm quantile uniroot
 #' @importFrom arrow read_csv_arrow write_csv_arrow write_dataset open_dataset
-#' @importFrom dplyr filter collect
+#' @importFrom dplyr filter collect summarise group_by n
 #' @import Matrix
 #' @keywords internal
 "_PACKAGE"

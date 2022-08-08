@@ -4,7 +4,7 @@
 #'
 #' @param given A vector of given (first) names. Case sensitive for all but \code{wgnd} and \code{fb_scraped}.
 #' @param family A vector of family (last; sur) names. Only used in \code{fb} to adjust country predictions. Case sensitive.
-#' @param country A vector of 2-letter country codes. Only used in \code{wgnd} to give \code{sex_in_country}.
+#' @param country A vector of 2-letter country codes. Only used in \code{wgnd} to give \code{sex_in_country_wgnd}.
 #' @param source A vector specify which source(s) to use:
 #' \itemize{
 #'   \item \href{https://dataverse.harvard.edu/dataverse/WGND}{World Gender Name Dictionary} (\code{wgnd})
@@ -94,21 +94,21 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
     }
   }
   if (!is.null(country)) {
+    if (anyNA(country)) country[is.na(country)] <- ""
     if (any(nchar(country) > 2)) stop("country should be 2 character codes")
     country <- toupper(country)
   }
   if (!is.null(given)) {
-    is_lowercase <- !grepl("^[A-Z]", given)
+    if (anyNA(given)) given[is.na(given)] <- ""
+    is_lowercase <- !grepl("^[A-Z]", given, perl = TRUE)
     if (any(is_lowercase)) given[is_lowercase] <- gsub("\\b(\\w)", "\\U\\1", given[is_lowercase], perl = TRUE)
     given[is.na(given) | given == ""] <- " "
   }
-  if (!is.null(family)) {
-    is_lowercase <- !grepl("^[A-Z]", family)
-    if (any(is_lowercase)) family[is_lowercase] <- gsub("\\b(\\w)", "\\U\\1", family[is_lowercase], perl = TRUE)
-    family[is.na(family) | family == ""] <- " "
-  }
-  start <- NULL
-  reses <- list()
+  start <- name <- gender <- NULL
+  ogiven <- given
+  res <- data.frame(given = unique(given), family = "", country = "")
+  given <- res$given
+  lgiven <- tolower(given)
   if (requested[["wgnd"]]) {
     db_dir <- paste0(dir, "wgnd_db")
     if (!dir.exists(db_dir)) {
@@ -119,49 +119,31 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       arrow::write_dataset(raw, db_dir, partitioning = "start")
       rm(raw)
     }
-    res <- data.frame(name = given)
-    if (!is.null(country)) {
-      res$country <- country
-      res$sex_in_country <- "U"
-    }
-    lgiven <- tolower(given)
-    ugiven <- unique(lgiven)
-    first_raw <- as.character(vapply(iconv(substring(ugiven, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
+    first_raw <- as.character(vapply(iconv(substring(lgiven, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
     db <- arrow::open_dataset(db_dir)
     initial <- dplyr::compute(dplyr::filter(db, start %in% first_raw))
     if (nrow(initial)) {
-      matches <- initial$name$as_vector() %in% ugiven
-      if (any(matches)) {
-        matched <- as.data.frame(initial$Filter(matches))
-        mres <- as.data.frame(do.call(rbind, lapply(split(matched$gender, matched$name), function(s) {
-          c(
-            count = length(s),
-            prob_fem = mean(s == "F")
-          )
-        })))
-        found <- lgiven %in% rownames(mres)
+      matched_wgnd <- dplyr::compute(dplyr::filter(initial, name %in% lgiven))
+      if (nrow(matched_wgnd)) {
+        mres <- as.data.frame(as.data.frame(dplyr::summarise(
+          dplyr::group_by(matched_wgnd, name),
+          count = n(), prob_fem = mean(gender == "F")
+        )))
+        found <- lgiven %in% mres$name
+        rownames(mres) <- mres$name
+        mres$name <- NULL
         nmissed <- sum(!found)
         if (nmissed) {
           mres <- rbind(
             mres, as.data.frame(matrix(
               rep(c(0, .5), each = nmissed), nmissed,
               dimnames = list(lgiven[!found], colnames(mres))
-            ))
+            ), make.names = FALSE, optional = TRUE)
           )
         }
+        colnames(mres) <- paste0(colnames(mres), "_wgnd")
         res <- cbind(res, mres[lgiven, ])
         rownames(res) <- NULL
-        if (!is.null(country)) {
-          matched[is.na(matched$code), "code"] <- "NA"
-          provided <- paste(lgiven, res$country)
-          present <- structure(matched$gender, names = paste(matched$name, matched$code))
-          found <- provided %in% names(present)
-          if (any(found)) {
-            res[found, "sex_in_country"] <- present[provided[found]]
-          }
-        }
-        res <- res[, !colnames(res) %in% c("name", "country")]
-        reses[["wgnd"]] <- res
       }
     }
   }
@@ -214,17 +196,13 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
         rm(lasts)
       }
     }
-    res <- data.frame(given = given)
-    if (!is.null(family)) res$family <- family
     if (!is.null(given)) {
-      ugiven <- unique(given)
-      first_raw <- as.character(vapply(iconv(substring(ugiven, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
+      first_raw <- as.character(vapply(iconv(substring(given, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
       db <- arrow::open_dataset(final[[1]])
       initial <- dplyr::compute(dplyr::filter(db, start %in% first_raw))
       if (nrow(initial)) {
-        matches <- initial$name$as_vector() %in% ugiven
-        if (any(matches)) {
-          mres <- as.data.frame(initial$Filter(matches))
+        mres <- as.data.frame(dplyr::compute(dplyr::filter(initial, name %in% given)))
+        if (nrow(mres)) {
           rownames(mres) <- mres$name
           found <- given %in% mres$name
           mres <- mres[, !colnames(mres) %in% c("name", "start")]
@@ -237,56 +215,11 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
               ))
             )
           }
+          colnames(mres) <- paste0(colnames(mres), "_fb")
           res <- cbind(res, mres[given, ])
         }
       }
     }
-    if (!is.null(family)) {
-      ufamily <- unique(family)
-      first_raw <- as.character(vapply(iconv(substring(ufamily, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
-      db <- arrow::open_dataset(final[[2]])
-      initial <- dplyr::compute(dplyr::filter(db, start %in% first_raw))
-      if (nrow(initial)) {
-        matches <- initial$name$as_vector() %in% ufamily
-        if (any(matches)) {
-          mres <- as.data.frame(initial$Filter(matches))
-          rownames(mres) <- mres$name
-          found <- family %in% mres$name
-          mres <- mres[, !colnames(mres) %in% c("name", "start")]
-          nmissed <- sum(!found)
-          if (nmissed) {
-            mres <- rbind(
-              mres, as.data.frame(matrix(
-                rep(numeric(ncol(mres)), each = nmissed), nmissed,
-                dimnames = list(family[!found], colnames(mres))
-              ))
-            )
-          }
-          mres <- mres[family, ]
-          if (all(colnames(mres) %in% colnames(res))) {
-            sum <- !is.na(mres)
-            mres[!sum] <- 0
-            sres <- res[, colnames(mres)]
-            ssum <- !is.na(sres)
-            sres[!ssum] <- 0
-            sum <- sum + ssum
-            sum[sum == 0] <- 1
-            res[, colnames(mres)] <- (sres + mres) / sum
-          } else {
-            res <- cbind(res, mres)
-          }
-        }
-      }
-    }
-    if (!full_country) {
-      cis <- grep("^[A-Z]{2}$", colnames(res))
-      if (length(cis)) {
-        res <- cbind(res[, -cis], predicted_country = colnames(res)[cis][max.col(res[, cis], "first")])
-      }
-    }
-    res <- res[, !colnames(res) %in% c("given", "family")]
-    rownames(res) <- NULL
-    reses[["fb"]] <- res
   }
   if (requested[["fb_scraped"]]) {
     final <- paste0(dir, sources$fb_scraped$final)
@@ -316,9 +249,7 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       arrow::write_csv_arrow(raw, final)
       rm(raw)
     }
-    res <- data.frame(name = given)
     initial <- as.data.frame(arrow::read_csv_arrow(final))
-    lgiven <- tolower(given)
     found <- lgiven %in% initial$name
     if (any(found)) {
       initial <- initial[initial$name %in% lgiven, ]
@@ -333,9 +264,9 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
           ))
         )
       }
-      res <- mres[lgiven, ]
+      colnames(mres) <- paste0(colnames(mres), "_fb_scraped")
+      res <- cbind(res, mres[lgiven, ])
       rownames(res) <- NULL
-      reses[["fb_scraped"]] <- res
     }
   }
   if (requested[["skydeck"]]) {
@@ -353,7 +284,6 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       arrow::write_csv_arrow(raw, final)
       rm(raw)
     }
-    res <- data.frame(name = given)
     initial <- as.data.frame(arrow::read_csv_arrow(final))
     found <- given %in% initial$name
     if (any(found)) {
@@ -369,9 +299,9 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
           ))
         )
       }
-      res <- mres[given, ]
+      colnames(mres) <- paste0(colnames(mres), "_skydeck")
+      res <- cbind(res, mres[given, ])
       rownames(res) <- NULL
-      reses[["skydeck"]] <- res
     }
   }
   if (requested[["usssa"]]) {
@@ -388,9 +318,8 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       arrow::write_csv_arrow(raw, final)
       rm(raw)
     }
-    res <- data.frame(name = given)
     initial <- as.data.frame(arrow::read_csv_arrow(final))
-    found <- given %in% rownames(initial)
+    found <- given %in% initial$name
     if (any(found)) {
       initial <- initial[initial$name %in% given, ]
       rownames(initial) <- initial$name
@@ -400,21 +329,87 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
         mres <- rbind(
           mres, as.data.frame(matrix(
             rep(c(0, .5), each = nmissed), nmissed,
-            dimnames = list(lgiven[!found], colnames(mres))
+            dimnames = list(given[!found], colnames(mres))
           ))
         )
       }
-      res <- mres[given, ]
+      colnames(mres) <- paste0(colnames(mres), "_usssa")
+      res <- cbind(res, mres[given, ])
       rownames(res) <- NULL
-      reses[["usssa"]] <- res
     }
   }
-  res <- data.frame(given = given)
-  if (!is.null(family)) res$family <- family
-  if (!is.null(country)) res$country <- country
-  for (s in names(reses)) {
-    colnames(reses[[s]]) <- paste0(colnames(reses[[s]]), "_", s)
-    res <- cbind(res, reses[[s]])
+  if (length(ogiven) != nrow(res)) {
+    rownames(res) <- res$given
+    res <- res[ogiven, ]
+    rownames(res) <- NULL
+  }
+  if (!is.null(country)) {
+    res$country <- country
+    if (requested[["wgnd"]]) {
+      res$sex_in_country_wgnd <- "U"
+      matched_wgnd <- as.data.frame(matched_wgnd)
+      if (anyNA(matched_wgnd$code) && "NA" %in% res$country) {
+        matched_wgnd[is.na(matched_wgnd$code), "code"] <- "NA"
+      }
+      provided <- paste(tolower(res$given), res$country)
+      matched_wgnd <- matched_wgnd[matched_wgnd$code %in% res$country, ]
+      matched_wgnd$pair <- paste(matched_wgnd$name, matched_wgnd$code)
+      matched_wgnd <- matched_wgnd[matched_wgnd$pair %in% provided, ]
+      if (nrow(matched_wgnd)) {
+        found <- provided %in% matched_wgnd$pair
+        res[found, "sex_in_country_wgnd"] <- unname(structure(matched_wgnd$gender, names = matched_wgnd$pair)[provided[found]])
+      }
+    }
+  }
+  if (requested[["fb"]]) {
+    if (!is.null(family)) {
+      if (anyNA(family)) family[is.na(family)] <- ""
+      is_lowercase <- !grepl("^[A-Z]", family, perl = TRUE)
+      if (any(is_lowercase)) family[is_lowercase] <- gsub("\\b(\\w)", "\\U\\1", family[is_lowercase], perl = TRUE)
+      family[is.na(family) | family == ""] <- " "
+      res$family <- family
+      ufamily <- unique(res$family)
+      first_raw <- as.character(vapply(iconv(substring(ufamily, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
+      db <- arrow::open_dataset(paste0(dir, sources$fb$final[[2]]))
+      initial <- dplyr::compute(dplyr::filter(db, start %in% first_raw))
+      if (nrow(initial)) {
+        mres <- as.data.frame(dplyr::compute(dplyr::filter(initial, name %in% ufamily)))
+        if (nrow(mres)) {
+          rownames(mres) <- mres$name
+          found <- ufamily %in% mres$name
+          mres <- mres[, !colnames(mres) %in% c("name", "start")]
+          nmissed <- sum(!found)
+          if (nmissed) {
+            mres <- rbind(
+              mres, as.data.frame(matrix(
+                rep(numeric(ncol(mres)), each = nmissed), nmissed,
+                dimnames = list(ufamily[!found], colnames(mres))
+              ))
+            )
+          }
+          colnames(mres) <- paste0(colnames(mres), "_fb")
+          mres <- mres[res$family, ]
+          if (all(colnames(mres) %in% colnames(res))) {
+            sum <- !is.na(mres)
+            mres[!sum] <- 0
+            sres <- res[, colnames(mres)]
+            ssum <- !is.na(sres)
+            sres[!ssum] <- 0
+            sum <- sum + ssum
+            sum[sum == 0] <- 1
+            res[, colnames(mres)] <- (sres + mres) / sum
+          } else {
+            res <- cbind(res, mres)
+          }
+        }
+      }
+    }
+    if (!full_country) {
+      cis <- grep("^[A-Z]{2}_fb$", colnames(res))
+      if (length(cis)) {
+        res <- cbind(res[, -cis], predicted_country = sub("_fb", "", colnames(res)[cis][max.col(res[, cis], "first")], fixed = TRUE))
+      }
+    }
   }
   res
 }

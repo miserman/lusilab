@@ -13,7 +13,7 @@ predict_demographics(given, family = NULL, country = NULL,
 
 \item{family}{A vector of family (last; sur) names. Only used in \code{fb} to adjust country predictions. Case sensitive.}
 
-\item{country}{A vector of 2-letter country codes. Only used in \code{wgnd} to give \code{sex_in_country}.}
+\item{country}{A vector of 2-letter country codes. Only used in \code{wgnd} to give \code{sex_in_country_wgnd}.}
 
 \item{source}{A vector specify which source(s) to use:
 \itemize{
