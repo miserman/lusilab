@@ -12,6 +12,7 @@
 #'   \item \href{https://sites.google.com/site/facebooknamelist/home}{Facebook Scraped} (\code{fb_scraped})
 #'   \item \href{https://archive.ics.uci.edu/ml/datasets/Gender+by+Name#}{Skydeck Censuses} (\code{skydeck})
 #'   \item \href{https://www.ssa.gov/OACT/babynames/limits.html}{U.S. Social Security Administration Baby Names} (\code{usssa})
+#'   \item \href{https://patentsview.org/download/data-download-tables}{U.S. Patent and Trademark Office Inventors} (\code{uspto})
 #' }
 #' Defaults to \code{all} to return all.
 #' @param dir Directory in which to save original and prepared names data.
@@ -76,6 +77,14 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       source = "https://www.ssa.gov/OACT/babynames/limits.html",
       final = "ssa_prepared.csv",
       year = 2021
+    ),
+    uspto = list(
+      title = "U.S. Patent and Trademark Office Inventors",
+      source = "https://patentsview.org/download/data-download-tables",
+      url = "https://s3.amazonaws.com/data.patentsview.org/download/inventor.tsv.zip",
+      original = "inventors.tsv.zip",
+      final = "inventors_db",
+      year = 2022
     )
   )
   dir <- paste0(normalizePath(dir, "/"), "/")
@@ -338,6 +347,63 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       rownames(res) <- NULL
     }
   }
+  if (requested[["uspto"]]) {
+    final <- paste0(dir, sources$uspto$final)
+    if (!any(file.exists(final))) {
+      if (verbose) message("reformatting US PTO dataset (takes a while)")
+      files <- paste0(dir, c(sources$uspto$original, "inventor.tsv"))
+      unzip(files[[1]], exdir = dir)
+      raw <- arrow::read_delim_arrow(paste0(dir, "inventor.tsv"), "\t")
+      raw <- as.data.frame(dplyr::filter(raw, !is.na(raw$name_first), attribution_status == 1))
+      raw <- do.call(rbind, lapply(split(raw[, c("name_first", "male_flag")], raw$name_first), function(d) {
+        name <- gsub("[^A-Za-z{()} '-]|(?:\\{[^(}]+)?\\(|\\)(?:[^}]*\\})?", "", d[1, "name_first"], perl = TRUE)
+        if (grepl(" ", name, fixed = TRUE)) {
+          name <- strsplit(name, "\\s+")[[1]]
+          name <- name[name != ""]
+        }
+        data.frame(name = name, female = sum(d$male_flag == 0), male = sum(d$male_flag), check.names = FALSE)
+      }))
+      raw <- do.call(rbind, lapply(split(raw, raw$name), function(d) {
+        total <- sum(d[, -1])
+        if (length(total) && total) {
+          res <- cbind(count = total, prob_fem = sum(d[, 2]) / total)
+          rownames(res) <- d[1, "name"]
+          res
+        }
+      }))
+      raw <- raw[nchar(rownames(raw)) > 0, ]
+      arrow::write_dataset(cbind(
+        start = as.character(vapply(iconv(substring(rownames(raw), 1, 1), toRaw = TRUE), "[[", raw(1), 1)),
+        name = rownames(raw),
+        as.data.frame(raw)
+      ), final, partition = "start")
+      rm(raw)
+      unlink(files)
+    }
+    first_raw <- as.character(vapply(iconv(substring(given, 1, 1), toRaw = TRUE), "[[", raw(1), 1))
+    db <- arrow::open_dataset(final)
+    initial <- dplyr::compute(dplyr::filter(db, start %in% first_raw))
+    if (nrow(initial)) {
+      mres <- as.data.frame(dplyr::compute(dplyr::filter(initial, name %in% given)))
+      if (nrow(mres)) {
+        rownames(mres) <- mres$name
+        found <- given %in% mres$name
+        mres <- mres[, !colnames(mres) %in% c("name", "start")]
+        nmissed <- sum(!found)
+        if (nmissed) {
+          mres <- rbind(
+            mres, as.data.frame(matrix(
+              rep(c(.5, numeric(ncol(mres) - 1)), each = nmissed), nmissed,
+              dimnames = list(given[!found], colnames(mres))
+            ))
+          )
+        }
+        colnames(mres) <- paste0(colnames(mres), "_uspto")
+        res <- cbind(res, mres[given, ])
+        rownames(res) <- NULL
+      }
+    }
+  }
   if (length(ogiven) != nrow(res)) {
     rownames(res) <- res$given
     res <- res[ogiven, ]
@@ -407,7 +473,7 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
     if (!full_country) {
       cis <- grep("^[A-Z]{2}_fb$", colnames(res))
       if (length(cis)) {
-        res <- cbind(res[, -cis], predicted_country = sub("_fb", "", colnames(res)[cis][max.col(res[, cis], "first")], fixed = TRUE))
+        res <- cbind(res[, -cis], predicted_country_fb = sub("_fb", "", colnames(res)[cis][max.col(res[, cis], "first")], fixed = TRUE))
       }
     }
   }

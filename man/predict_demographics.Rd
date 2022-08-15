@@ -22,6 +22,7 @@ predict_demographics(given, family = NULL, country = NULL,
 \item \href{https://sites.google.com/site/facebooknamelist/home}{Facebook Scraped} (\code{fb_scraped})
 \item \href{https://archive.ics.uci.edu/ml/datasets/Gender+by+Name#}{Skydeck Censuses} (\code{skydeck})
 \item \href{https://www.ssa.gov/OACT/babynames/limits.html}{U.S. Social Security Administration Baby Names} (\code{usssa})
+\item \href{https://patentsview.org/download/data-download-tables}{U.S. Patent and Trademark Office Inventors} (\code{uspto})
 }
 Defaults to \code{all} to return all.}
 
