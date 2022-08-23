@@ -110,10 +110,10 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
   if (!is.null(given)) {
     if (anyNA(given)) given[is.na(given)] <- ""
     is_lowercase <- !grepl("^[A-Z]", given, perl = TRUE)
-    if (any(is_lowercase)) given[is_lowercase] <- gsub("\\b(\\w)", "\\U\\1", given[is_lowercase], perl = TRUE)
+    if (any(is_lowercase)) given[is_lowercase] <- gsub("(?:^|[ -])(\\w)", "\\U\\1", given[is_lowercase], perl = TRUE)
     given[is.na(given) | given == ""] <- " "
   }
-  start <- name <- gender <- NULL
+  start <- name <- gender <- attribution_status <- NULL
   ogiven <- given
   res <- data.frame(given = unique(given), family = "", country = "")
   given <- res$given
