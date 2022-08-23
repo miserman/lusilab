@@ -41,7 +41,7 @@ personality_database <- function(profiles = "famous", category = "all", outFile 
   offset <- max(0, floor(start / perpage))
   profiles <- GET(paste0(
     "https://api.personality-database.com/api/v1/profiles?pid=",
-    pid, "&property_id=", pid, "&cid=", cid, "&cat_id=", cid, "&offset=", offset, "&limit=", perpage
+    pid, "&property_id=", pid, "&cid=", cid, "&cat_id=", cid, "&offset=", offset, "&limit=", perpage, "&sort=", sort
   ))
   if (profiles$status_code != 200) stop("failed to retrieve profile list", call. = FALSE)
   profiles <- fromJSON(rawToChar(profiles$content))$profiles
