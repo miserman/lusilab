@@ -5,8 +5,10 @@
 \title{Personality-Database API}
 \usage{
 personality_database(profiles = "famous", category = "all",
-  outFile = NULL, sort = "hot", start = 0, limit = Inf, retry = 10,
-  verbose = TRUE, cores = detectCores() - 1)
+  outFile = NULL, sort = "alphabet", start = 0, limit = Inf,
+  retry = 10, sleep_time = 60, verbose = TRUE,
+  cache = paste0(tempdir(), "/personality_database/"), list_cache = NULL,
+  cores = detectCores() - 1)
 }
 \arguments{
 \item{profiles}{Name of the profile list, between \code{famous}, \code{fictional}, and \code{discovery}.}
@@ -15,8 +17,7 @@ personality_database(profiles = "famous", category = "all",
 
 \item{outFile}{Path to a .csv file to save results as.}
 
-\item{sort}{How the profile list should be sorted, between \code{hot} (default), \code{new}, \code{top},
-and \code{alphabet}.}
+\item{sort}{How the profile list should be sorted, between \code{alphabet} (default), \code{hot}, \code{new}, or \code{top}.}
 
 \item{start}{Profile from the list to start on.}
 
@@ -24,7 +25,14 @@ and \code{alphabet}.}
 
 \item{retry}{Logical; if \code{TRUE}, will retry after a failed attempt.}
 
+\item{sleep_time}{Number of seconds to wait between retries.}
+
 \item{verbose}{Logical; if \code{FALSE}, will not display status messages.}
+
+\item{cache}{Path to a directory in which to save raw responses.}
+
+\item{list_cache}{A saved profile list, or path to such a file, to collect scores for. Providing this
+avoids collecting a list initially.}
 
 \item{cores}{Number of CPU cores to split \code{names} across.}
 }
@@ -38,6 +46,6 @@ Collect data from the \href{https://www.personality-database.com}{personality-da
 \examples{
 \dontrun{
 # get scores from the 5 "HOT"est famous people
-hot5 <- personality_database(limit = 5)
+hot5 <- personality_database(limit = 5, sort = "hot")
 }
 }

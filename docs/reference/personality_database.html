@@ -45,8 +45,10 @@
 
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">personality_database</span><span class="op">(</span>profiles <span class="op">=</span> <span class="st">"famous"</span>, category <span class="op">=</span> <span class="st">"all"</span>,</span>
-<span>  outFile <span class="op">=</span> <span class="cn">NULL</span>, sort <span class="op">=</span> <span class="st">"hot"</span>, start <span class="op">=</span> <span class="fl">0</span>, limit <span class="op">=</span> <span class="cn">Inf</span>, retry <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>, cores <span class="op">=</span> <span class="fu">detectCores</span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<span>  outFile <span class="op">=</span> <span class="cn">NULL</span>, sort <span class="op">=</span> <span class="st">"alphabet"</span>, start <span class="op">=</span> <span class="fl">0</span>, limit <span class="op">=</span> <span class="cn">Inf</span>,</span>
+<span>  retry <span class="op">=</span> <span class="fl">10</span>, sleep_time <span class="op">=</span> <span class="fl">60</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  cache <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"/personality_database/"</span><span class="op">)</span>, list_cache <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  cores <span class="op">=</span> <span class="fu">detectCores</span><span class="op">(</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -64,8 +66,7 @@
 
 
 <dt>sort</dt>
-<dd><p>How the profile list should be sorted, between <code>hot</code> (default), <code>new</code>, <code>top</code>,
-and <code>alphabet</code>.</p></dd>
+<dd><p>How the profile list should be sorted, between <code>alphabet</code> (default), <code>hot</code>, <code>new</code>, or <code>top</code>.</p></dd>
 
 
 <dt>start</dt>
@@ -80,8 +81,21 @@ and <code>alphabet</code>.</p></dd>
 <dd><p>Logical; if <code>TRUE</code>, will retry after a failed attempt.</p></dd>
 
 
+<dt>sleep_time</dt>
+<dd><p>Number of seconds to wait between retries.</p></dd>
+
+
 <dt>verbose</dt>
 <dd><p>Logical; if <code>FALSE</code>, will not display status messages.</p></dd>
+
+
+<dt>cache</dt>
+<dd><p>Path to a directory in which to save raw responses.</p></dd>
+
+
+<dt>list_cache</dt>
+<dd><p>A saved profile list, or path to such a file, to collect scores for. Providing this
+avoids collecting a list initially.</p></dd>
 
 
 <dt>cores</dt>
@@ -100,7 +114,7 @@ and <code>alphabet</code>.</p></dd>
     <h2>Examples</h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span><span class="co"># get scores from the 5 "HOT"est famous people</span></span></span>
-<span class="r-in"><span><span class="va">hot5</span> <span class="op">&lt;-</span> <span class="fu">personality_database</span><span class="op">(</span>limit <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">hot5</span> <span class="op">&lt;-</span> <span class="fu">personality_database</span><span class="op">(</span>limit <span class="op">=</span> <span class="fl">5</span>, sort <span class="op">=</span> <span class="st">"hot"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 </code></pre></div>
     </div>
