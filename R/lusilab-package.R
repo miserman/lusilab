@@ -7,6 +7,10 @@
 #' @importFrom stats cor pf pnorm qf qnorm quantile uniroot
 #' @importFrom arrow read_csv_arrow write_csv_arrow write_dataset open_dataset
 #' @importFrom dplyr filter collect summarise group_by n
+#' @importFrom nlme lme
+#' @importFrom stats na.omit as.formula lm fitted resid
+#' @importFrom grDevices pdf dev.size dev.copy dev.off
+#' @importFrom graphics par layout plot.new strwidth polygon text
 #' @import Matrix
 #' @keywords internal
 "_PACKAGE"

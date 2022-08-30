@@ -17,7 +17,7 @@ A list with entries for \code{data} (a \code{data.frame} with the original data)
 }
 \description{
 Downloads and processes historical baby names data from the U.S.
-\href{https://www.ssa.gov/OACT/babynames/limits.html}{Social Security Administraction}.
+\href{https://www.ssa.gov/OACT/babynames/limits.html}{Social Security Administration}.
 }
 \examples{
 \dontrun{

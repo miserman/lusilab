@@ -7,7 +7,7 @@ Description: Includes functions for power analysis, permuting or bootstrapping
   mediations, automated factor analysis, and pulling text from reddit, imsdb, and rottentomatoes,
   plus some other things to play with.
 Depends: Matrix
-Imports: jsonlite, httr, parallel, lingmatch, RedditExtractoR, arrow, dplyr
+Imports: jsonlite, httr, parallel, lingmatch, RedditExtractoR, arrow, dplyr, nlme
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE, old_usage = TRUE)

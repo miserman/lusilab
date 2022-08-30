@@ -1,7 +1,7 @@
 #' Get Baby Names Data
 #'
 #' Downloads and processes historical baby names data from the U.S.
-#' \href{https://www.ssa.gov/OACT/babynames/limits.html}{Social Security Administraction}.
+#' \href{https://www.ssa.gov/OACT/babynames/limits.html}{Social Security Administration}.
 #' @param dir Directory in which to save data.
 #' @param source Which dataset to download; between \code{national} (default), \code{state}, and \code{territory}.
 #' @returns A list with entries for \code{data} (a \code{data.frame} with the original data), and
