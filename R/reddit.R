@@ -31,6 +31,7 @@
 #' for \href{reddit.com/r/Anxiety}{https://www.reddit.com/r/Anxiety/}), including 'r/' before each
 #' subreddit name, though this will be added if missing.
 #' @param type Type of user data to download; either 'comments' or 'submissions' (posts).
+#' @param useragent String to set as the request's User-Agent.
 #' @param data The data frame returned from a reddit call (e.g.,
 #' \code{comments = reddit('trees'); reddit.lsm(comments)})
 #' @examples
@@ -60,10 +61,10 @@ reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv",
   saf <- options("stringsAsFactors")[[1]]
   options(stringsAsFactors = FALSE)
   on.exit(options(stringsAsFactors = saf))
-  if (!missing(search)) {
+  if (!is.null(search)) {
     cat("collecting urls from search...\n")
     tl <- tryCatch(
-      RedditExtractoR::find_thread_urls(keywords = search, subreddit = if (missing(topics)) NA else topics[1], ...)$url,
+      RedditExtractoR::find_thread_urls(keywords = search, subreddit = if (is.null(topics)) NA else topics[1], ...)$url,
       error = function(e) stop(e$message, call. = FALSE)
     )
     topics <- 1
@@ -72,7 +73,7 @@ reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv",
   sort <- sop[pmatch(tolower(sort), sop)]
   d <- NULL
   for (t in topics) {
-    if (missing(search)) {
+    if (is.null(search)) {
       bl <- paste0("https://www.reddit.com/r/", t, "/")
       tl <- tryCatch(jsonlite::fromJSON(readLines(paste0(bl, ".json?limit=", lim), warn = FALSE)),
         error = function(e) {
@@ -82,7 +83,7 @@ reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv",
       )
       if (is.null(tl)) next else tl <- paste0(bl, tl$data$children$data$id, ".json", if (sort != "hot") paste0("?sort=", sort))
     }
-    cat(paste0("collecting comments from ", if (missing(search)) paste0("/r/", t) else paste("search:", search), "\n"))
+    cat(paste0("collecting comments from ", if (is.null(search)) paste0("/r/", t) else paste("search:", search), "\n"))
     for (p in seq(tl)) {
       cat(paste(p, "/", length(tl), ":", gsub("\\.json.*$|\\?ref.*$", "/", tl[p]), "\n"))
       d <- rbind(d, tryCatch(
@@ -141,44 +142,68 @@ reddit.karma <- function(users) {
 #' @rdname reddit
 #' @export
 
-reddit.usercomments <- reddit.userdata <- function(users, filename, subreddits, lim = 100, type = "comments") {
+reddit.usercomments <- reddit.userdata <- function(
+    users, filename = NULL, subreddits = NULL, lim = 100, type = "comments",
+    useragent = paste("R LUSI @", date())) {
   if (!missing(type)) type <- if (grepl("^c", type)) "comments" else "submitted"
-  if (!missing(subreddits) && any(!grepl("r/", subreddits, fixed = TRUE))) subreddits <- sub("^r/|^", "r/", subreddits)
-  d <- do.call(rbind, lapply(unique(users), function(u) {
-    tryCatch(
-      {
-        a <- ""
-        op <- NULL
-        while (lim > 0) {
-          tt <- jsonlite::fromJSON(readLines(paste0(
-            "https://www.reddit.com/user/",
-            u, "/", type, "/.json?limit=", lim, "&after=", a
-          ), warn = FALSE))
-          nr <- nrow(tt$data$children$data)
-          if (nr) {
-            tt$data$children$data[, vapply(tt$data$children$data, class, "") %in% c("list", "data.frame")] <- NA
-            op <- rbind(op, tt$data$children$data)
-            if (!is.null(tt$data$after)) {
-              a <- tt$data$after
-              lim <- lim - nrow(tt$data$children$data)
-            } else {
-              lim <- 0
-            }
-          } else {
-            lim <- 0
-          }
+  if (!is.null(subreddits) && any(!grepl("r/", subreddits, fixed = TRUE))) subreddits <- sub("^r/|^", "r/", subreddits)
+  ua <- httr::user_agent(useragent)
+  d <- list()
+  for (u in unique(users)) {
+    a <- ""
+    op <- NULL
+    while (lim > 0) {
+      tt <- httr::GET(paste0(
+        "https://www.reddit.com/user/",
+        u, "/", type, "/.json?limit=", lim, "&after=", a
+      ), ua)
+      if (tt$status_code != 200) {
+        tt <- fromJSON(rawToChar(tt$content))
+        warning(paste(
+          "failed to retrieve content for user", u, if (is.list(tt)) paste0("(", tt$error, "): ", tt$message)
+        ))
+        if (!is.list(tt) || substring(tt$error, 1, 1) == "4") break else next
+      }
+      tt <- fromJSON(rawToChar(tt$content))
+      nr <- nrow(tt$data$children$data)
+      if (!is.null(nr) && nr) {
+        tt$data$children$data[, vapply(tt$data$children$data, class, "") %in% c("list", "data.frame")] <- NA
+        cn <- colnames(tt$data$children$data)
+        if (!is.null(op)) {
+          su <- colnames(op) %in% cn
+          if (!all(su)) op <- op[, su]
+          su <- cn %in% colnames(op)
+          if (!all(su)) tt$data$children$data <- tt$data$children$data[, su]
         }
-        op
-      },
-      error = function(e) NULL
-    )
-  }))
-  if (!missing(subreddits)) d <- d[d$subreddit_name_prefixed %in% subreddits, ]
-  if (!missing(filename)) {
-    write.csv(d, filename, row.names = FALSE)
-    message("file saved to ", paste0(getwd(), "/", filename))
+        op <- rbind(op, tt$data$children$data)
+        if (!is.null(tt$data$after)) {
+          a <- tt$data$after
+          lim <- lim - nrow(tt$data$children$data)
+        } else {
+          lim <- 0
+        }
+      } else {
+        lim <- 0
+      }
+    }
+    d[[u]] <- op
   }
-  d
+  if (length(d)) {
+    if (length(d) != 1) {
+      cols <- lapply(d, colnames)
+      if (any(vapply(cols, length, 0) != length(cols[[1]]))) {
+        common <- Reduce(intersect, cols)
+        for (i in seq_along(d)) d[[i]] <- d[[i]][, common]
+      }
+    }
+    d <- do.call(rbind, unname(d))
+    if (!is.null(subreddits)) d <- d[d$subreddit_name_prefixed %in% subreddits, ]
+    if (!is.null(filename)) {
+      write.csv(d, filename, row.names = FALSE)
+      message("file saved to ", paste0(getwd(), "/", filename))
+    }
+    d
+  }
 }
 
 #' @rdname reddit

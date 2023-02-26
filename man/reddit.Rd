@@ -13,8 +13,8 @@ reddit(topics, search = NULL, sort = "hot", filename = "reddit.csv",
 
 reddit.karma(users)
 
-reddit.usercomments(users, filename, subreddits, lim = 100,
-  type = "comments")
+reddit.usercomments(users, filename = NULL, subreddits = NULL, lim = 100,
+  type = "comments", useragent = paste("R LUSI @", date()))
 
 reddit.lsm(data)
 }
@@ -58,6 +58,8 @@ for \href{reddit.com/r/Anxiety}{https://www.reddit.com/r/Anxiety/}), including '
 subreddit name, though this will be added if missing.}
 
 \item{type}{Type of user data to download; either 'comments' or 'submissions' (posts).}
+
+\item{useragent}{String to set as the request's User-Agent.}
 
 \item{data}{The data frame returned from a reddit call (e.g.,
 \code{comments = reddit('trees'); reddit.lsm(comments)})}

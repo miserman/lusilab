@@ -52,8 +52,8 @@ or searches.</p>
 <span></span>
 <span><span class="fu">reddit.karma</span><span class="op">(</span><span class="va">users</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">reddit.usercomments</span><span class="op">(</span><span class="va">users</span>, <span class="va">filename</span>, <span class="va">subreddits</span>, lim <span class="op">=</span> <span class="fl">100</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"comments"</span><span class="op">)</span></span>
+<span><span class="fu">reddit.usercomments</span><span class="op">(</span><span class="va">users</span>, filename <span class="op">=</span> <span class="cn">NULL</span>, subreddits <span class="op">=</span> <span class="cn">NULL</span>, lim <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"comments"</span>, useragent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste</a></span><span class="op">(</span><span class="st">"R LUSI @"</span>, <span class="fu"><a href="https://rdrr.io/r/base/date.html" class="external-link">date</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">reddit.lsm</span><span class="op">(</span><span class="va">data</span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -122,6 +122,10 @@ subreddit name, though this will be added if missing.</p></dd>
 
 <dt>type</dt>
 <dd><p>Type of user data to download; either 'comments' or 'submissions' (posts).</p></dd>
+
+
+<dt>useragent</dt>
+<dd><p>String to set as the request's User-Agent.</p></dd>
 
 
 <dt>data</dt>
