@@ -158,16 +158,16 @@ reddit.usercomments <- reddit.userdata <- function(
         u, "/", type, "/.json?limit=", lim, "&after=", a
       ), ua)
       if (tt$status_code != 200) {
-        tt <- fromJSON(rawToChar(tt$content))
+        tt <- tryCatch(fromJSON(rawToChar(tt$content)), error = function(e) NULL)
         warning(paste(
           "failed to retrieve content for user", u, if (is.list(tt)) paste0("(", tt$error, "): ", tt$message)
         ))
-        if (!is.list(tt) || substring(tt$error, 1, 1) == "4") break else next
+        break
       }
-      tt <- fromJSON(rawToChar(tt$content))
+      tt <- tryCatch(fromJSON(rawToChar(tt$content)), error = function(e) NULL)
       nr <- nrow(tt$data$children$data)
       if (!is.null(nr) && nr) {
-        tt$data$children$data[, vapply(tt$data$children$data, class, "") %in% c("list", "data.frame")] <- NA
+        tt$data$children$data[, vapply(tt$data$children$data, is.list, TRUE)] <- NA
         cn <- colnames(tt$data$children$data)
         if (!is.null(op)) {
           su <- colnames(op) %in% cn
