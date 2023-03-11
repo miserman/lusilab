@@ -2,14 +2,13 @@
 #'
 #' Predict sex and maybe country from a name.
 #'
-#' @param given A vector of given (first) names. Case sensitive for all but \code{wgnd} and \code{fb_scraped}.
+#' @param given A vector of given (first) names. Case sensitive for all but \code{wgnd}.
 #' @param family A vector of family (last; sur) names. Only used in \code{fb} to adjust country predictions. Case sensitive.
 #' @param country A vector of 2-letter country codes. Only used in \code{wgnd} to give \code{sex_in_country_wgnd}.
 #' @param source A vector specify which source(s) to use:
 #' \itemize{
 #'   \item \href{https://dataverse.harvard.edu/dataverse/WGND}{World Gender Name Dictionary} (\code{wgnd})
 #'   \item \href{https://github.com/philipperemy/name-dataset}{Facebook Hack} (\code{fb})
-#'   \item \href{https://sites.google.com/site/facebooknamelist/home}{Facebook Scraped} (\code{fb_scraped})
 #'   \item \href{https://archive.ics.uci.edu/ml/datasets/Gender+by+Name#}{Skydeck Censuses} (\code{skydeck})
 #'   \item \href{https://www.ssa.gov/OACT/babynames/limits.html}{U.S. Social Security Administration Baby Names} (\code{usssa})
 #'   \item \href{https://patentsview.org/download/data-download-tables}{U.S. Patent and Trademark Office Inventors} (\code{uspto})
@@ -56,14 +55,6 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       final = c("fb_given_db", "fb_family_db"),
       year = 2021
     ),
-    fb_scraped = list(
-      title = "Facebook Scraped",
-      source = "https://sites.google.com/site/facebooknamelist/home",
-      url = "https://sites.google.com/site/facebooknamelist/namelist/firstname_nickname.csv?attredirects=0&d=1",
-      original = "facebook_scaped.csv",
-      final = "facebook_scaped_prepared.csv",
-      year = 2009
-    ),
     skydeck = list(
       title = "Skydeck Censuses",
       source = "https://archive.ics.uci.edu/ml/datasets/Gender+by+Name",
@@ -96,9 +87,17 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
     if (rs != "ssa") {
       s <- sources[[rs]]
       dir.create(dir, FALSE, TRUE)
-      if (!all(file.exists(paste0(dir, s$original))) && !file.exists(paste0(dir, s$final))) {
+      if (!all(file.exists(paste0(dir, s$original))) && !all(file.exists(paste0(dir, s$final)))) {
         if (verbose) message("downloading dataset:\n  ", s$title, "\n  ", s$source, "\n")
         for (i in seq_along(s$original)) download.file(s$url[[i]], paste0(dir, s$original[[i]]), quiet = !verbose)
+        for (i in seq_along(s$original)) {
+          req <- GET(s$url[[i]], write_disk(paste0(dir, s$original[[i]])))
+          if (req$status_code != 200) {
+            unlink(paste0(dir, s$original[[i]]))
+            warning("failed to download ", s$title, ", so skipping it")
+            requested[[rs]] <- FALSE
+          }
+        }
       }
     }
   }
@@ -115,7 +114,7 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
   }
   start <- name <- gender <- attribution_status <- NULL
   ogiven <- given
-  res <- data.frame(given = unique(given), family = "", country = "")
+  res <- data.frame(given = given[!duplicated(tolower(given))], family = "", country = "")
   given <- res$given
   lgiven <- tolower(given)
   if (requested[["wgnd"]]) {
@@ -230,54 +229,6 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
       }
     }
   }
-  if (requested[["fb_scraped"]]) {
-    final <- paste0(dir, sources$fb_scraped$final)
-    if (!file.exists(final)) {
-      if (verbose) message("reformatting Facebook Scraped dataset")
-      original <- paste0(dir, sources$fb_scraped$original)
-      raw <- arrow::read_csv_arrow(original)
-      raw <- do.call(rbind, lapply(split(raw, raw$`Firstname&nicknames`), function(d) {
-        names <- strsplit(tolower(d[[1]]), ",", fixed = TRUE)[[1]]
-        total <- d$`# of times the name is labeled as female` + d$`# of times the name is labeled as male`
-        data.frame(
-          name = names,
-          count = total,
-          prob_fem = d$`# of times the name is labeled as female`,
-          check.names = FALSE
-        )
-      }))
-      raw <- do.call(rbind, lapply(split(raw, raw$name), function(d) {
-        if (nrow(d) == 1) {
-          d$prob_fem <- d$prob_fem / d$count
-          d
-        } else {
-          total <- sum(d$count)
-          data.frame(name = d[1, 1], count = total, prob_fem = sum(d$prob_fem) / total)
-        }
-      }))
-      arrow::write_csv_arrow(raw, final)
-      rm(raw)
-    }
-    initial <- as.data.frame(arrow::read_csv_arrow(final))
-    found <- lgiven %in% initial$name
-    if (any(found)) {
-      initial <- initial[initial$name %in% lgiven, ]
-      rownames(initial) <- initial$name
-      mres <- initial[lgiven[found], -1]
-      if (!all(found)) {
-        nmissed <- sum(!found)
-        mres <- rbind(
-          mres, as.data.frame(matrix(
-            rep(c(0, .5), each = nmissed), nmissed,
-            dimnames = list(lgiven[!found], colnames(mres))
-          ))
-        )
-      }
-      colnames(mres) <- paste0(colnames(mres), "_fb_scraped")
-      res <- cbind(res, mres[lgiven, ])
-      rownames(res) <- NULL
-    }
-  }
   if (requested[["skydeck"]]) {
     final <- paste0(dir, sources$skydeck$final)
     if (!file.exists(final)) {
@@ -350,7 +301,7 @@ predict_demographics <- function(given, family = NULL, country = NULL, source = 
   if (requested[["uspto"]]) {
     final <- paste0(dir, sources$uspto$final)
     if (!any(file.exists(final))) {
-      if (verbose) message("reformatting US PTO dataset (takes a while)")
+      if (verbose) message("reformatting USPTO dataset (takes a while)")
       files <- paste0(dir, c(sources$uspto$original, "inventor.tsv"))
       unzip(files[[1]], exdir = dir)
       raw <- arrow::read_delim_arrow(paste0(dir, "inventor.tsv"), "\t")

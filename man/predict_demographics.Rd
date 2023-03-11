@@ -9,7 +9,7 @@ predict_demographics(given, family = NULL, country = NULL,
   full_country = FALSE, verbose = TRUE)
 }
 \arguments{
-\item{given}{A vector of given (first) names. Case sensitive for all but \code{wgnd} and \code{fb_scraped}.}
+\item{given}{A vector of given (first) names. Case sensitive for all but \code{wgnd}.}
 
 \item{family}{A vector of family (last; sur) names. Only used in \code{fb} to adjust country predictions. Case sensitive.}
 
@@ -19,7 +19,6 @@ predict_demographics(given, family = NULL, country = NULL,
 \itemize{
 \item \href{https://dataverse.harvard.edu/dataverse/WGND}{World Gender Name Dictionary} (\code{wgnd})
 \item \href{https://github.com/philipperemy/name-dataset}{Facebook Hack} (\code{fb})
-\item \href{https://sites.google.com/site/facebooknamelist/home}{Facebook Scraped} (\code{fb_scraped})
 \item \href{https://archive.ics.uci.edu/ml/datasets/Gender+by+Name#}{Skydeck Censuses} (\code{skydeck})
 \item \href{https://www.ssa.gov/OACT/babynames/limits.html}{U.S. Social Security Administration Baby Names} (\code{usssa})
 \item \href{https://patentsview.org/download/data-download-tables}{U.S. Patent and Trademark Office Inventors} (\code{uspto})

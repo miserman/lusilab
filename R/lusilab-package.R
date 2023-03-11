@@ -1,4 +1,4 @@
-#' @importFrom utils write.csv download.file read.csv unzip
+#' @importFrom utils write.csv download.file read.csv unzip untar
 #' @importFrom RedditExtractoR find_thread_urls get_thread_content
 #' @importFrom jsonlite fromJSON read_json write_json
 #' @importFrom lingmatch lingmatch lma_termcat lma_weight lma_dtm lma_simets
