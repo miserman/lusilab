@@ -48,12 +48,16 @@ babelnet_to_wordnet <- function(ids, outFile = NULL,
       n <- sub("bn:", "s", bid, fixed = TRUE)
       f <- paste0(cache, n, ".xml")
       ff <- paste0(cache, n, ".json")
-      if (!file.exists(f)) httr::GET(paste0("http://babelnet.org/rdf/data/", n), httr::write_disk(f, TRUE))
+      if (!file.exists(f)) {
+        req <- httr::GET(paste0("http://babelnet.org/rdf/data/", n), httr::write_disk(f, TRUE))
+        if (req$status_code != 200) unlink(f)
+      }
       if (file.exists(f)) {
+        wd <- NULL
         if (file.exists(ff)) {
           wd <- jsonlite::read_json(ff)
         } else {
-          url <- grep("edu/wn", readLines(f), fixed = TRUE, value = TRUE)
+          url <- grep("edu/wn", readLines(f, warn = FALSE), fixed = TRUE, value = TRUE)
           if (length(url)) {
             wid <- regmatches(url, regexec("wn31/\\d([^/]+)>", url))[[1]]
             if (length(wid)) {
@@ -96,10 +100,10 @@ babelnet_to_wordnet <- function(ids, outFile = NULL,
       }))
     } else {
       data.frame(
-        id = m$id,
-        babelnet = m$babelnet,
-        subject = m$subject,
-        definition = m$definition,
+        id = id,
+        babelnet = NA,
+        subject = NA,
+        definition = NA,
         term = NA,
         wordnet = NA,
         wordnet30 = NA
