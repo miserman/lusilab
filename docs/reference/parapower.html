@@ -164,25 +164,27 @@ you can reasonably estimate power for any model. See the Monte Carlo section of 
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Residuals:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      Min       1Q   Median       3Q      Max </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> -1.69819 -0.68556 -0.08288  0.60221  2.05516 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> -1.23994 -0.57602  0.08468  0.39595  1.75405 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Coefficients:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             Estimate Std. Error t value Pr(&gt;|t|)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  -0.1194     0.2527  -0.472    0.642</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x            -0.4164     0.2977  -1.399    0.179</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             Estimate Std. Error t value Pr(&gt;|t|)   </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)   0.6189     0.1931   3.205  0.00491 **</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x             0.7918     0.2123   3.729  0.00154 **</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ---</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Residual standard error: 1.114 on 18 degrees of freedom</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Multiple R-squared:  0.09802,	Adjusted R-squared:  0.04791 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic: 1.956 on 1 and 18 DF,  p-value: 0.1789</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Residual standard error: 0.8536 on 18 degrees of freedom</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Multiple R-squared:  0.4358,	Adjusted R-squared:  0.4045 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> F-statistic:  13.9 on 1 and 18 DF,  p-value: 0.001536</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## here, we can input the correlation to get other effect sizes</span></span></span>
 <span class="r-in"><span><span class="co">## k defaults to 2, which is appropriate in this case</span></span></span>
 <span class="r-in"><span><span class="fu">convert_effect</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">x</span>, <span class="va">y</span><span class="op">)</span>, N <span class="op">=</span> <span class="va">N</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  Pearson's r Cohen's d    AUC Odds Ratio   eta^2 Cohen's f     F num_df den_df</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      -0.3131   -0.6593 0.3205     0.3025 0.09802   -0.3296 1.956      1     18</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>  p-value</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.1789</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  Pearson's r Cohen's d    AUC Odds Ratio  eta^2 Cohen's f    F num_df den_df</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       0.6602     1.758 0.8931      24.25 0.4358    0.8789 13.9      1     18</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   p-value</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  0.001536</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## we want to know what N gives us .8 power to detect this effect at .05 alpha</span></span></span>
 <span class="r-in"><span><span class="co">## we can set up a function to easily try different Ns</span></span></span>
@@ -207,7 +209,7 @@ you can reasonably estimate power for any model. See the Monte Carlo section of 
 <span class="r-in"><span><span class="co">## uniroot will try different values of N (between 20 and 100 here),</span></span></span>
 <span class="r-in"><span><span class="co">## and output the one that gets closest to the set power</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/uniroot.html" class="external-link">uniroot</a></span><span class="op">(</span><span class="va">sim1</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">20</span>, <span class="fl">100</span><span class="op">)</span><span class="op">)</span><span class="op">$</span><span class="va">root</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 54.61587</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 56.62202</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span></span></span>
