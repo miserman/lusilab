@@ -12,7 +12,8 @@
 #' @export
 
 bablenet_synset <- function(ids, outDir = NULL, overwrite = FALSE,
-                            cache = paste0(dirname(tempdir()), "/babelnet_pages/"), cores = parallel::detectCores() - 2) {
+                            cache = paste0(dirname(tempdir()), "/babelnet_pages/"),
+                            cores = parallel::detectCores() - 2) {
   if (!is.character(cache)) cache <- tempdir()
   dir.create(cache, FALSE, TRUE)
   if (!is.null(outDir)) dir.create(cache, FALSE, TRUE)
@@ -42,6 +43,7 @@ bablenet_synset <- function(ids, outDir = NULL, overwrite = FALSE,
       }
     }
     res <- list(id = id, lemmas = NULL, definitions = NULL, examples = NULL, relations = NULL, sources = NULL)
+    success <- FALSE
     page <- NULL
     file <- paste0(cache, file_id, ".rds")
     if (file.exists(file)) {
@@ -54,9 +56,14 @@ bablenet_synset <- function(ids, outDir = NULL, overwrite = FALSE,
         saveRDS(page, file, compress = "xz")
       } else {
         unlink(file)
+        warning("failed to retrieve ", id)
+        return(res)
       }
     }
     if (!is.null(page)) {
+      if (grepl("Daily request limit reached", page, fixed = TRUE)) {
+        stop("daily request limit reached", call. = FALSE)
+      }
       tryCatch(
         {
           lemmas <- strsplit(page, '<div class="synonim-list"', fixed = TRUE)[[1]][[2]]
@@ -110,11 +117,12 @@ bablenet_synset <- function(ids, outDir = NULL, overwrite = FALSE,
               names = sub("<.*$", "", sources)
             )
           }
+          success <- TRUE
         },
         error = function(e) warning("failed to parse ", id)
       )
     }
-    if (!is.null(outDir)) jsonlite::write_json(res, out_file, auto_unbox = TRUE)
+    if (!is.null(outDir) && success) jsonlite::write_json(res, out_file, auto_unbox = TRUE)
     res
   }
 
