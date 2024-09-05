@@ -1,6 +1,8 @@
-pandoc: 3.1.1
-pkgdown: 2.0.7
+pandoc: 3.1.11
+pkgdown: 2.1.0
 pkgdown_sha: ~
 articles: {}
-last_built: 2024-03-27T23:04Z
-
+last_built: 2024-09-05T11:11Z
+urls:
+  reference: https://miserman.github.io/lusilab/reference
+  article: https://miserman.github.io/lusilab/articles

@@ -8,7 +8,7 @@
 #' @param cores Number of CPU cores to use during processing
 #' @returns A list with entries for each id in \code{ids}.
 #' @examples
-#' bablenet_synset("bn:00103811a")
+#' (bablenet_synset("bn:00103811a"))
 #' @export
 
 bablenet_synset <- function(ids, outDir = NULL, overwrite = FALSE,

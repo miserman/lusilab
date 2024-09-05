@@ -8,4 +8,12 @@
 \description{
 Includes functions for power analysis, permuting or bootstrapping mediations, automated factor analysis, and pulling text from reddit, imsdb, and rottentomatoes, plus some other things to play with.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://miserman.github.io/lusilab/}
+  \item Report bugs at \url{https://github.com/miserman/lusilab/issues}
+}
+
+}
 \keyword{internal}

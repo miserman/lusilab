@@ -11,4 +11,6 @@ Imports: jsonlite, httr, parallel, lingmatch, RedditExtractoR, arrow, dplyr, nlm
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE, old_usage = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
+URL: https://miserman.github.io/lusilab/
+BugReports: https://github.com/miserman/lusilab/issues

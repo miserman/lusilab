@@ -1,26 +1,30 @@
 #' Reddit
 #'
-#' Essentially a wrapper for the RedditExtractoR package; pulls comments from specified subreddits
-#' or searches.
+#' In parts, a wrapper for the RedditExtractoR package; pulls posts and comments
+#' from specified subreddits or searches.
 #'
 #' @param topics A string or vector of strings corresponding to subreddit names (e.g., 'trees'
 #' referring to reddit.com/r/trees/). Only the first value is used if search is specified.
 #' @param search Passed to \code{\link[RedditExtractoR]{find_thread_urls}} as the search_terms argument.
 #' If this is specified, if topic is specified, the first topic value will be added as the
 #' subreddit argument (which will restrict search to that subreddit).
+#' @param ... Passed additional arguments to \code{\link[RedditExtractoR]{find_thread_urls}} if search
+#' is specified.
 #' @param sort How to sort initial comments. Only applies if search is not specified. Default is
 #' 'hot', with 'new', 'rising', 'top', 'gilded', and 'ads', as options.
 #' @param filename Name of the file to be saved in the current working directory. This will
 #' currently always be a csv file.
 #' @param write Logical: if FALSE, data will not be save to a file (they will just be stored as
 #' objects if you've named your reddit call).
-#' @param lim Numeric: sets the number of posts to pull per topic. The max is 100 if search is not
-#' specified. If search is specified, lim is ignored.
+#' @param lim Numeric: sets the number of posts to pull per topic. Only applies if \code{search}
+#' is not specified.
 #' @param filter Passed to \code{\link{grepl}}. A pattern used to filter posts by the content of
 #' their comments. default is '\\[removed\\]' to filter out those comments that have been deleted.
 #' @param clean Logical; if \code{FALSE}, converts curly to straight quotes.
-#' @param ... Passed additional arguments to \code{\link[RedditExtractoR]{find_thread_urls}} if search
-#' is specified.
+#' @param comments_only Logical; if \code{TRUE}, will exclude original posts from each thread.
+#' @param posts_only Logical; if \code{TRUE}, will only collect the initial post for each thread.
+#' This changes what is returned, relative to posts returned along with comments.
+#' @param useragent String to set as the request's User-Agent.
 #' @param users A vector of user names (as in reddit.com/user/username; such as those in the user
 #' column from the reddit function). Information is never gathered twice for the same user;
 #' \code{\link{reddit.usercomments}} simply removes duplicate user names (i.e., unique(users)),
@@ -31,9 +35,28 @@
 #' for \href{reddit.com/r/Anxiety}{https://www.reddit.com/r/Anxiety/}), including 'r/' before each
 #' subreddit name, though this will be added if missing.
 #' @param type Type of user data to download; either 'comments' or 'submissions' (posts).
-#' @param useragent String to set as the request's User-Agent.
-#' @param data The data frame returned from a reddit call (e.g.,
+#' @param data The \code{data.frame} returned from a reddit call (e.g.,
 #' \code{comments = reddit('trees'); reddit.lsm(comments)})
+#' @returns From \code{reddit} if \code{posts_only} is \code{FALSE}:
+#' A \code{data.frame} with a row for each post / comment:
+#' \itemize{
+#'    \item \strong{\code{url}}: URL of the thread.
+#'    \item \strong{\code{author}}: Username of the author.
+#'    \item \strong{\code{date}}: Date of the submission in YYYY-MM-DD format.
+#'    \item \strong{\code{timestamp}}: Time of the submission in seconds since 1970-01-01;
+#'      use \code{\link{as.POSIXct}} to convert to a date object.
+#'    \item \strong{\code{score}}: Score.
+#'    \item \strong{\code{upvotes}}: Number of downvotes.
+#'    \item \strong{\code{downvotes}}: Number of upvotes.
+#'    \item \strong{\code{golds}}: Number of golds.
+#'    \item \strong{\code{comment}}: Text of the submission. Called \code{comment} for
+#'      compatibility, though it may be a post or comment, as indicated by \code{type}.
+#'    \item \strong{\code{comment_id}}: Position of the submission within the thread, where 0
+#'      means original post.
+#'    \item \strong{\code{type}}: Whether the submission is a comment or post.
+#' }
+#' If \code{posts_only} is \code{TRUE}, a \code{data.frame} with all variables from the
+#' Reddit response, where, for instance, text will be \code{selftext}.
 #' @examples
 #' \dontrun{
 #' # these will all save a file called 'reddit.csv' to the current working directory.
@@ -57,7 +80,9 @@
 #' @export
 #'
 
-reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv", write = TRUE, lim = 100, filter = "\\[removed\\]", clean = TRUE, ...) {
+reddit <- function(topics, search = NULL, ..., sort = "hot", filename = "reddit.csv", write = TRUE,
+                   lim = 100, filter = "\\[removed\\]", clean = TRUE, comments_only = FALSE,
+                   posts_only = FALSE, useragent = paste("R LUSI @", date())) {
   saf <- options("stringsAsFactors")[[1]]
   options(stringsAsFactors = FALSE)
   on.exit(options(stringsAsFactors = saf))
@@ -72,28 +97,88 @@ reddit <- function(topics, search = NULL, sort = "hot", filename = "reddit.csv",
   sop <- c("hot", "new", "rising", "top", "gilded", "ads")
   sort <- sop[pmatch(tolower(sort), sop)]
   d <- NULL
+  ua <- httr::user_agent(useragent)
   for (t in topics) {
     if (is.null(search)) {
+      thread_lim <- lim
       bl <- paste0("https://www.reddit.com/r/", t, "/")
-      tl <- tryCatch(jsonlite::fromJSON(readLines(paste0(bl, ".json?limit=", lim), warn = FALSE)),
-        error = function(e) {
-          warning("failed to get links from /r/", t)
-          NULL
+      tl <- NULL
+      after <- ""
+      cat(paste0("collecting posts from /r/", t, "... "))
+      while (thread_lim > 0) {
+        req <- httr::GET(paste0(bl, ".json?limit=", thread_lim, "&after=", after), ua)
+        if (req$status_code != 200) {
+          content <- tryCatch(fromJSON(rawToChar(req$content)), error = function(e) NULL)
+          warning(paste(
+            "failed to retrieve posts from ", t,
+            if (is.list(content)) paste0("(", content$error, "): ", content$message)
+          ))
+          break
         }
-      )
-      if (is.null(tl)) next else tl <- paste0(bl, tl$data$children$data$id, ".json", if (sort != "hot") paste0("?sort=", sort))
+        content <- tryCatch(fromJSON(rawToChar(req$content)), error = function(e) NULL)
+        if (is.null(content)) {
+          thread_lim <- 0
+          next
+        } else {
+          tl <- unique(c(tl, paste0(
+            bl, content$data$children$data$id, ".json", if (sort != "hot") paste0("?sort=", sort)
+          )))
+        }
+        thread_lim <- thread_lim - nrow(content$data$children$data)
+        if (posts_only) {
+          nr <- nrow(content$data$children$data)
+          if (!is.null(nr) && nr) {
+            content$data$children$data[, vapply(content$data$children$data, is.list, TRUE)] <- NA
+            cn <- colnames(content$data$children$data)
+            if (!is.null(d)) {
+              su <- colnames(d) %in% cn
+              if (!all(su)) content$data$children$data[, colnames(d)[!su]] <- NA
+              su <- cn %in% colnames(d)
+              if (!all(su)) content$data$children$data <- content$data$children$data[, su]
+            }
+            d <- rbind(d, content$data$children$data)
+          } else {
+            thread_lim <- 0
+          }
+        }
+        if (!is.null(content$data$after)) {
+          after <- content$data$after
+        } else {
+          thread_lim <- 0
+        }
+      }
+      cat(length(tl), "found\n")
     }
-    cat(paste0("collecting comments from ", if (is.null(search)) paste0("/r/", t) else paste("search:", search), "\n"))
-    for (p in seq(tl)) {
-      cat(paste(p, "/", length(tl), ":", gsub("\\.json.*$|\\?ref.*$", "/", tl[p]), "\n"))
-      d <- rbind(d, tryCatch(
-        RedditExtractoR::get_thread_content(sub("\\.json.*", "", tl[p]))$comments,
-        error = function(e) NULL
-      ))
+    if (!posts_only) {
+      cat(paste0("collecting comments from ", if (is.null(search)) paste0("/r/", t) else paste("search:", search), "\n"))
+      for (p in seq(tl)) {
+        cat(paste(p, "/", length(tl), ":", gsub("\\.json.*$|\\?ref.*$", "/", tl[p]), "\n"))
+        d <- rbind(d, tryCatch(
+          {
+            thread <- RedditExtractoR::get_thread_content(sub("\\.json.*", "", tl[p]))
+            thread$comments$type <- "comment"
+            if (comments_only) {
+              return(thread$comments)
+            }
+            post <- thread$threads[c(
+              "url", "author", "date", "timestamp", "score", "upvotes", "downvotes", "golds"
+            )]
+            post$comment <- thread$threads$text
+            post$comment_id <- 0
+            post$type <- "post"
+            rbind(post, thread$comments)
+          },
+          error = function(e) NULL
+        ))
+      }
     }
   }
-  d <- d[!grepl(filter, d$comment), ]
-  if (clean) d$comment <- gsub("[\034\035]", '"', gsub("[\030\031]", "'", d$comment))
+  if (posts_only) {
+    if (!is.null(d) && clean) d$selftext <- gsub("[\034\035]", '"', gsub("[\030\031]", "'", d$selftext))
+  } else {
+    d <- d[!grepl(filter, d$comment), ]
+    if (clean) d$comment <- gsub("[\034\035]", '"', gsub("[\030\031]", "'", d$comment))
+  }
   if (write) {
     message(paste0("output saved to ", getwd(), "/", filename))
     write.csv(d, filename, row.names = FALSE)

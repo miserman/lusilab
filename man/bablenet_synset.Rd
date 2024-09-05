@@ -26,5 +26,5 @@ A list with entries for each id in \code{ids}.
 Retrieve \href{https://babelnet.org/}{BabelNet} synset information.
 }
 \examples{
-bablenet_synset("bn:00103811a")
+(bablenet_synset("bn:00103811a"))
 }

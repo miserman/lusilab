@@ -1,0 +1,30 @@
+url: https://miserman.github.io/lusilab/
+
+template:
+  bootswatch: cyborg
+  theme: arrow-dark
+  bootstrap: 5
+  bslib:
+    bg: "#000"
+    fg: "#c3c3c3"
+    link-color: "#fff"
+    navbar-dark-active-color: "#fff !important"
+    border-color: "#3e3e3e"
+    dropdown-header-color: "#fff"
+    text-muted: "#747474"
+
+navbar:
+  structure:
+    left: [reference]
+    right: [github]
+
+home:
+  sidebar:
+    structure: links
+
+footer:
+  structure:
+    left: none
+    right: none
+  components:
+    none: ""

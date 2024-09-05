@@ -7,9 +7,10 @@
 \alias{reddit.lsm}
 \title{Reddit}
 \usage{
-reddit(topics, search = NULL, sort = "hot", filename = "reddit.csv",
+reddit(topics, search = NULL, ..., sort = "hot", filename = "reddit.csv",
   write = TRUE, lim = 100, filter = "\\\\[removed\\\\]", clean = TRUE,
-  ...)
+  comments_only = FALSE, posts_only = FALSE,
+  useragent = paste("R LUSI @", date()))
 
 reddit.karma(users)
 
@@ -26,6 +27,9 @@ referring to reddit.com/r/trees/). Only the first value is used if search is spe
 If this is specified, if topic is specified, the first topic value will be added as the
 subreddit argument (which will restrict search to that subreddit).}
 
+\item{...}{Passed additional arguments to \code{\link[RedditExtractoR]{find_thread_urls}} if search
+is specified.}
+
 \item{sort}{How to sort initial comments. Only applies if search is not specified. Default is
 'hot', with 'new', 'rising', 'top', 'gilded', and 'ads', as options.}
 
@@ -35,16 +39,20 @@ currently always be a csv file.}
 \item{write}{Logical: if FALSE, data will not be save to a file (they will just be stored as
 objects if you've named your reddit call).}
 
-\item{lim}{Numeric: sets the number of posts to pull per topic. The max is 100 if search is not
-specified. If search is specified, lim is ignored.}
+\item{lim}{Numeric: sets the number of posts to pull per topic. Only applies if \code{search}
+is not specified.}
 
 \item{filter}{Passed to \code{\link{grepl}}. A pattern used to filter posts by the content of
 their comments. default is '\[removed\]' to filter out those comments that have been deleted.}
 
 \item{clean}{Logical; if \code{FALSE}, converts curly to straight quotes.}
 
-\item{...}{Passed additional arguments to \code{\link[RedditExtractoR]{find_thread_urls}} if search
-is specified.}
+\item{comments_only}{Logical; if \code{TRUE}, will exclude original posts from each thread.}
+
+\item{posts_only}{Logical; if \code{TRUE}, will only collect the initial post for each thread.
+This changes what is returned, relative to posts returned along with comments.}
+
+\item{useragent}{String to set as the request's User-Agent.}
 
 \item{users}{A vector of user names (as in reddit.com/user/username; such as those in the user
 column from the reddit function). Information is never gathered twice for the same user;
@@ -59,14 +67,34 @@ subreddit name, though this will be added if missing.}
 
 \item{type}{Type of user data to download; either 'comments' or 'submissions' (posts).}
 
-\item{useragent}{String to set as the request's User-Agent.}
-
-\item{data}{The data frame returned from a reddit call (e.g.,
+\item{data}{The \code{data.frame} returned from a reddit call (e.g.,
 \code{comments = reddit('trees'); reddit.lsm(comments)})}
 }
+\value{
+From \code{reddit} if \code{posts_only} is \code{FALSE}:
+A \code{data.frame} with a row for each post / comment:
+\itemize{
+\item \strong{\code{url}}: URL of the thread.
+\item \strong{\code{author}}: Username of the author.
+\item \strong{\code{date}}: Date of the submission in YYYY-MM-DD format.
+\item \strong{\code{timestamp}}: Time of the submission in seconds since 1970-01-01;
+use \code{\link{as.POSIXct}} to convert to a date object.
+\item \strong{\code{score}}: Score.
+\item \strong{\code{upvotes}}: Number of downvotes.
+\item \strong{\code{downvotes}}: Number of upvotes.
+\item \strong{\code{golds}}: Number of golds.
+\item \strong{\code{comment}}: Text of the submission. Called \code{comment} for
+compatibility, though it may be a post or comment, as indicated by \code{type}.
+\item \strong{\code{comment_id}}: Position of the submission within the thread, where 0
+means original post.
+\item \strong{\code{type}}: Whether the submission is a comment or post.
+}
+If \code{posts_only} is \code{TRUE}, a \code{data.frame} with all variables from the
+Reddit response, where, for instance, text will be \code{selftext}.
+}
 \description{
-Essentially a wrapper for the RedditExtractoR package; pulls comments from specified subreddits
-or searches.
+In parts, a wrapper for the RedditExtractoR package; pulls posts and comments
+from specified subreddits or searches.
 }
 \examples{
 \dontrun{
